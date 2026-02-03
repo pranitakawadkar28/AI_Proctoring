@@ -1,47 +1,75 @@
-import crypto from "node:crypto";
-import { registerUser } from "../services/auth.service.js";
-import { registerSchema } from "../validators/auth.validators.js";
-import { userModel } from "../models/user.model.js";
-import { AppError } from "../utils/AppError.js";
+import { NODE_ENV } from "../config/env.js";
+import {
+  loginService,
+  registerService,
+  resendVerificationService,
+  verifyEmailService,
+} from "../services/auth.service.js";
+
+import { loginSchema, registerSchema } from "../validators/auth.validators.js";
 
 export const registerController = async (req, res, next) => {
   try {
-    const validatedData = registerSchema.parse(req.body);
+    const data = registerSchema.parse(req.body);
 
-    await registerUser(validatedData);
+    const user = await registerService(data);
+
+    console.log("USER REGISTERED 👉", user);
 
     res.status(201).json({
       success: true,
-      message: "User registered. Please verify email.",
+      message: "User registered. Verify email.",
     });
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    next(err);
   }
 };
 
 export const verifyEmailController = async (req, res, next) => {
   try {
-    const hashToken = crypto
-      .createHash("sha256")
-      .update(req.params.token)
-      .digest("hex");
+    await verifyEmailService(req.params.token);
 
-    const user = await userModel.findOne({
-      emailVerificationToken: hashToken,
-      emailVerificationExpires: { $gt: Date.now() },
+    res.status(200).json({
+      success: true,
+      message: "Email verified",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const resendVerificationController = async (req, res, next) => {
+  try {
+    await resendVerificationService(req.body.email);
+
+    res.status(200).json({
+      success: true,
+      message: "Verification email resent",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const loginController = async (req, res, next) => {
+  try {
+    const data = loginSchema.parse(req.body);
+
+    const { user, token } = await loginService(data);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 24 * 60 * 60 * 1000,
     });
 
-    if (!user) throw new AppError("Token invalid or expired", 400);
+    console.log("User logged in:", user.email);
 
-    user.isEmailVerified = true;
-    user.emailVerificationToken = undefined;
-    user.emailVerificationExpires = undefined;
-
-    await user.save();
-
-    res.json({
+    return res.status(200).json({
       success: true,
-      message: "Email verified successfully",
+      message: "Login successful",
+      user,
     });
   } catch (err) {
     next(err);

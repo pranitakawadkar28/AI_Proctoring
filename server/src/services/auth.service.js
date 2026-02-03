@@ -1,17 +1,20 @@
+import crypto from "node:crypto";
 import { userModel } from "../models/user.model.js";
-import { hashPassword } from "../utils/hash.js";
 import { AppError } from "../utils/AppError.js";
+import { comparePassword, hashPassword } from "../utils/hash.js";
 import { generateEmailToken } from "../utils/token.js";
 import { FRONTEND_URL } from "../config/env.js";
 import { sendEmail } from "../utils/sendEmail.js";
+import { generatedToken } from "../utils/jwt.js";
 
-export const registerUser = async ({ username, email, password, role = "student" }) => {
+const EMAIL_TOKEN_EXPIRY = 10 * 60 * 1000;
 
+export const registerService = async ({ username, email, password, role }) => {
   username = username.trim();
   email = email.toLowerCase().trim();
 
   const userExist = await userModel.findOne({ $or: [{ username }, { email }] });
-  if (userExist) throw new AppError("User already exists", 409);
+  if (userExist) throw new AppError("USER_ALREADY_EXISTS", 409);
 
   const hashedPassword = await hashPassword(password);
 
@@ -22,25 +25,85 @@ export const registerUser = async ({ username, email, password, role = "student"
     role,
   });
 
+  await sendVerification(user);
+
+  return user;
+};
+
+export const resendVerificationService = async (email) => {
+  email = email.toLowerCase().trim();
+
+  const user = await userModel.findOne({ email });
+  console.log("USER FOUND:", user);
+
+  if (!user) throw new AppError("USER_NOT_FOUND", 404);
+  if (user.isEmailVerified) throw new AppError("EMAIL_ALREADY_VERIFIED", 400);
+
+  await sendVerification(user);
+
+  return true;
+};
+
+export const verifyEmailService = async (token) => {
+  const hashToken = crypto.createHash("sha256").update(token).digest("hex");
+
+  const user = await userModel.findOne({
+    emailVerificationToken: hashToken,
+    emailVerificationExpires: { $gt: Date.now() },
+  });
+
+  if (!user) throw new AppError("TOKEN_INVALID_OR_EXPIRED", 400);
+
+  user.isEmailVerified = true;
+  user.emailVerificationToken = undefined;
+  user.emailVerificationExpires = undefined;
+
+  await user.save();
+
+  return true;
+};
+
+const sendVerification = async (user) => {
   const { token, hashToken } = generateEmailToken();
 
   user.emailVerificationToken = hashToken;
-  user.emailVerificationExpires = Date.now() + 10 * 60 * 1000;
+  user.emailVerificationExpires = Date.now() + EMAIL_TOKEN_EXPIRY;
 
   await user.save();
 
   const verifyURL = `${FRONTEND_URL}/verify-email/${token}`;
-
-  console.log("VERIFY LINK 👉", verifyURL);
+  console.log("verify URL ---->", verifyURL);
 
   await sendEmail({
     to: user.email,
     subject: "Verify your email",
-    html: `
-      <h3>Verify your account</h3>
-      <a href="${verifyURL}">Click here</a>
-    `,
+    html: `<a href="${verifyURL}">Verify Account</a>`,
+  });
+};
+
+export const loginService = async ({ email, password }) => {
+  email = email.toLowerCase().trim();
+
+  const user = await userModel.findOne({ email }).select("+password");
+
+  if (!user) throw new AppError("INVALID_CREDENTIALS", 401);
+
+  if (!user.isEmailVerified)
+    throw new AppError("EMAIL_NOT_VERIFIED", 403);
+
+  const isMatched = await comparePassword(password, user.password);
+
+  if (!isMatched) throw new AppError("INVALID_CREDENTIALS", 401);
+
+  const token = generatedToken({
+    userId: user._id,
+    role: user.role,
   });
 
-  return user.toJSON();
+  user.password = undefined;
+
+  return {
+    user: user.toJSON(),
+    token,
+  };
 };
