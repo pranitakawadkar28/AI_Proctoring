@@ -55,9 +55,9 @@ export const loginController = async (req, res, next) => {
   try {
     const data = loginSchema.parse(req.body);
 
-    const { user, token } = await loginService(data);
+    const { user, accessToken } = await loginService(data);
 
-    res.cookie("token", token, {
+    res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: NODE_ENV === "production",
       sameSite: "strict",
@@ -70,6 +70,7 @@ export const loginController = async (req, res, next) => {
       success: true,
       message: "Login successful",
       user,
+      accessToken,
     });
   } catch (err) {
     next(err);

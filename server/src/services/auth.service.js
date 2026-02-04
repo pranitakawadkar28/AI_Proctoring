@@ -5,7 +5,7 @@ import { comparePassword, hashPassword } from "../utils/hash.js";
 import { generateEmailToken } from "../utils/token.js";
 import { FRONTEND_URL } from "../config/env.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { generatedToken } from "../utils/jwt.js";
+import { generateAccessToken } from "../utils/jwt.js";
 
 const EMAIL_TOKEN_EXPIRY = 10 * 60 * 1000;
 
@@ -95,15 +95,20 @@ export const loginService = async ({ email, password }) => {
 
   if (!isMatched) throw new AppError("INVALID_CREDENTIALS", 401);
 
-  const token = generatedToken({
+
+  const payload = {
     userId: user._id,
     role: user.role,
-  });
+  };
+
+  const accessToken = generateAccessToken(payload);
+
+  await user.save();
 
   user.password = undefined;
 
   return {
     user: user.toJSON(),
-    token,
+    accessToken,
   };
 };
