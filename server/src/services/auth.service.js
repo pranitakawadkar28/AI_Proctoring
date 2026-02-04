@@ -5,7 +5,7 @@ import { comparePassword, hashPassword } from "../utils/hash.js";
 import { generateEmailToken } from "../utils/token.js";
 import { FRONTEND_URL } from "../config/env.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
+import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
 
 const EMAIL_TOKEN_EXPIRY = 10 * 60 * 1000;
 

@@ -61,8 +61,15 @@ export const loginController = async (req, res, next) => {
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: NODE_ENV === "production",
-      sameSite: "strict",
+      sameSite: "none",
       maxAge: 24 * 60 * 60 * 1000,
+    });
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: NODE_ENV === "production",
+      sameSite: "none",
+      maxAge: 2 * 60 * 1000,
     });
 
     console.log("User logged in:", user.email);
@@ -71,7 +78,6 @@ export const loginController = async (req, res, next) => {
       success: true,
       message: "Login successful",
       user,
-      accessToken,
     });
   } catch (err) {
     next(err);
@@ -84,11 +90,17 @@ export const refreshTokenController = async (req, res, next) => {
 
     const accessToken = await refreshTokenService(token);
 
-    res.json({
-      accessToken,
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: NODE_ENV === "production",
+      sameSite: "none",
+      maxAge: 2 * 60 * 1000,
     });
+
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }
 };
+
 
