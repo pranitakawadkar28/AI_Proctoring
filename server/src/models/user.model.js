@@ -1,4 +1,3 @@
-// src/models/user.model.js
 import mongoose from "mongoose";
 
 const userSchema = new mongoose.Schema(
@@ -38,6 +37,11 @@ const userSchema = new mongoose.Schema(
     emailVerificationToken: String,
 
     emailVerificationExpires: Date,
+
+    refreshToken: {
+      type: String,
+      select: false,
+    },
   },
   { timestamps: true },
 );

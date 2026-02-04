@@ -1,6 +1,7 @@
 import { NODE_ENV } from "../config/env.js";
 import {
   loginService,
+  refreshTokenService,
   registerService,
   resendVerificationService,
   verifyEmailService,
@@ -55,9 +56,9 @@ export const loginController = async (req, res, next) => {
   try {
     const data = loginSchema.parse(req.body);
 
-    const { user, accessToken } = await loginService(data);
+    const { user, accessToken, refreshToken } = await loginService(data);
 
-    res.cookie("accessToken", accessToken, {
+    res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: NODE_ENV === "production",
       sameSite: "strict",
@@ -66,7 +67,7 @@ export const loginController = async (req, res, next) => {
 
     console.log("User logged in:", user.email);
 
-    return res.status(200).json({
+    res.json({
       success: true,
       message: "Login successful",
       user,
@@ -76,3 +77,18 @@ export const loginController = async (req, res, next) => {
     next(err);
   }
 };
+
+export const refreshTokenController = async (req, res, next) => {
+  try {
+    const token = req.cookies.refreshToken;
+
+    const accessToken = await refreshTokenService(token);
+
+    res.json({
+      accessToken,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

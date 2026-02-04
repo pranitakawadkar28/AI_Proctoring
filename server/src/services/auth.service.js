@@ -5,7 +5,7 @@ import { comparePassword, hashPassword } from "../utils/hash.js";
 import { generateEmailToken } from "../utils/token.js";
 import { FRONTEND_URL } from "../config/env.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { generateAccessToken } from "../utils/jwt.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/jwt.js";
 
 const EMAIL_TOKEN_EXPIRY = 10 * 60 * 1000;
 
@@ -102,7 +102,10 @@ export const loginService = async ({ email, password }) => {
   };
 
   const accessToken = generateAccessToken(payload);
+   const refreshToken = generateRefreshToken(payload);
 
+   // store refresh in DB
+  user.refreshToken = refreshToken;
   await user.save();
 
   user.password = undefined;
@@ -110,5 +113,27 @@ export const loginService = async ({ email, password }) => {
   return {
     user: user.toJSON(),
     accessToken,
+    refreshToken,
   };
 };
+
+export const refreshTokenService = async (token) => {
+  if (!token) throw new AppError("UNAUTHORIZED", 401);
+
+  const decoded = verifyRefreshToken(token);
+
+  const user = await userModel
+    .findById(decoded.userId)
+    .select("+refreshToken");
+
+  if (!user || user.refreshToken !== token)
+    throw new AppError("FORBIDDEN", 403);
+
+  const newAccessToken = generateAccessToken({
+    userId: user._id,
+    role: user.role,
+  });
+
+  return newAccessToken;
+};
+
