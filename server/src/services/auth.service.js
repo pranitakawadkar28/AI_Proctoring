@@ -6,6 +6,7 @@ import { generateEmailToken } from "../utils/token.js";
 import { FRONTEND_URL } from "../config/env.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import bcrypt from "bcryptjs";
 
 const EMAIL_TOKEN_EXPIRY = 10 * 60 * 1000;
 
@@ -161,4 +162,35 @@ export const forgotPasswordService = async (email) => {
     subject: "Reset Password",
     html: `<p>Reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`,
   });
+}
+
+export const resetPasswordService = async (token, newPassword) => {
+  const hashedToken = crypto
+    .createHash("sha256")
+    .update(token)
+    .digest("hex");
+
+  const user = await userModel.findOne({
+    resetPasswordToken: hashedToken,
+    resetPasswordExpire: { $gt: Date.now() },
+  })
+
+  if (!user) {
+  throw new AppError("Invalid or expired reset token", 400);
+}
+
+// Hash new password
+  const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+
+  user.password = hashedPassword;
+
+  // Clear reset fields
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpire = undefined;
+
+  // LOGOUT ALL DEVICES
+  user.refreshToken = undefined;
+
+  await user.save();
 }

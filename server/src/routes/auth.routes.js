@@ -5,6 +5,7 @@ import {
   refreshTokenController,
   registerController,
   resendVerificationController,
+  resetPasswordController,
   verifyEmailController,
 } from "../controllers/auth.controller.js";
 import { protect } from "../middlewares/auth.middleware.js";
@@ -24,6 +25,8 @@ router.get("/profile", protect, (req, res) => {
   });
 });
 router.post("/forgot-password", forgotPasswordController);
+router.post("/reset-password", resetPasswordController);
+
 
 
 export default router;

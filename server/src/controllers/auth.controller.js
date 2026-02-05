@@ -5,6 +5,7 @@ import {
   refreshTokenService,
   registerService,
   resendVerificationService,
+  resetPasswordService,
   verifyEmailService,
 } from "../services/auth.service.js";
 
@@ -104,7 +105,7 @@ export const refreshTokenController = async (req, res, next) => {
   }
 };
 
-export const forgotPasswordController = async (req, res) => {
+export const forgotPasswordController = async (req, res, next) => {
   try {
     await forgotPasswordService(req.body.email);
 
@@ -112,12 +113,27 @@ export const forgotPasswordController = async (req, res) => {
       success: true,
       message: "If account exists, reset link sent",
     })
-  } catch (error) {
-    console.error(error);
-
-    res.status(500).json({
-      success: false,
-      message: "Something went wrong",
-    }); 
+  } catch (err) {
+    next(err); 
   }
 }
+
+export const resetPasswordController = async (req, res, next) => {
+  try {
+    const { token } = req.query;
+    const { password } = req.body;
+
+    await resetPasswordService(token, password);
+
+    // Clear cookies
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
+    res.json({
+      success: true,
+      message: "Password reset successful. Please login again.",
+    });
+  } catch (err) {
+    next(err);   
+  }
+};
