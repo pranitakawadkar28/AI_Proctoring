@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  forgotPasswordController,
   loginController,
   refreshTokenController,
   registerController,
@@ -22,5 +23,7 @@ router.get("/profile", protect, (req, res) => {
     user: req.user,
   });
 });
+router.post("/forgot-password", forgotPasswordController);
+
 
 export default router;

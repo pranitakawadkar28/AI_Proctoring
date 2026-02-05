@@ -1,5 +1,6 @@
 import { NODE_ENV } from "../config/env.js";
 import {
+  forgotPasswordService,
   loginService,
   refreshTokenService,
   registerService,
@@ -15,7 +16,7 @@ export const registerController = async (req, res, next) => {
 
     const user = await registerService(data);
 
-    console.log("USER REGISTERED 👉", user);
+    console.log("USER REGISTERED", user);
 
     res.status(201).json({
       success: true,
@@ -103,4 +104,20 @@ export const refreshTokenController = async (req, res, next) => {
   }
 };
 
+export const forgotPasswordController = async (req, res) => {
+  try {
+    await forgotPasswordService(req.body.email);
 
+    res.json({
+      success: true,
+      message: "If account exists, reset link sent",
+    })
+  } catch (error) {
+    console.error(error);
+
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+    }); 
+  }
+}

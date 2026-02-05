@@ -137,3 +137,28 @@ export const refreshTokenService = async (token) => {
   return newAccessToken;
 };
 
+export const forgotPasswordService = async (email) => {
+  const user = await userModel.findOne({ email });
+
+  if(!user) return;
+
+  const resetToken = crypto.randomBytes(32).toString("hex");
+
+  const hashedToken = crypto
+  .createHash("sha256")
+  .update(resetToken)
+  .digest("hex")
+
+  user.resetPasswordToken = hashedToken;
+  user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+
+  await user.save();
+
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`
+
+  await sendEmail({
+    to: user.email,
+    subject: "Reset Password",
+    html: `<p>Reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`,
+  });
+}

@@ -5,7 +5,7 @@ import { userModel } from "../models/user.model.js";
 
 export const protect = async (req, res, next) => {
   try {
-    console.log("🍪 Cookies:", req.cookies); 
+    console.log("Cookies:", req.cookies); 
     let token;
 
     // cookie

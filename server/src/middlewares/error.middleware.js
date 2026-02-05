@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 
 export const errorHandler = (err, req, res, next) => {
-  console.error("🔥 Error stack:", err.stack);
+  console.error("Error stack:", err.stack);
 
   if (err instanceof ZodError) {
     return res.status(400).json({
