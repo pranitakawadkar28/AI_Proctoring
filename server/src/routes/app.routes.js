@@ -10,6 +10,9 @@ router.post("/users", protect, restrictTo("admin"), );
 // Teacher can create tests
 router.post("/tests", protect, restrictTo("teacher"), );
 
+// Teacher -> view results
+router.get("/tests/:id/results", protect, restrictTo("teacher"), );
+
 // Student can attempt tests
 router.post("/tests/:id/attempt", protect, restrictTo("student"), );
 
