@@ -103,7 +103,7 @@ export const loginService = async ({ email, password }) => {
   };
 
   const accessToken = generateAccessToken(payload);
-   const refreshToken = generateRefreshToken(payload);
+  const refreshToken = generateRefreshToken(payload);
 
    // store refresh in DB
   user.refreshToken = refreshToken;
