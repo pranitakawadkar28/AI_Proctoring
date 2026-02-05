@@ -194,3 +194,12 @@ export const resetPasswordService = async (token, newPassword) => {
 
   await user.save();
 }
+
+export const logoutService = async (refreshToken) => {
+  if (!refreshToken) return;
+
+  await User.updateOne(
+    { refreshTokens: refreshToken },
+    { $pull: { refreshTokens: refreshToken } }
+  );
+};

@@ -2,6 +2,7 @@ import express from "express";
 import {
   forgotPasswordController,
   loginController,
+  logoutController,
   refreshTokenController,
   registerController,
   resendVerificationController,
@@ -26,6 +27,7 @@ router.get("/profile", protect, (req, res) => {
 });
 router.post("/forgot-password", forgotPasswordController);
 router.post("/reset-password", resetPasswordController);
+router.post("/logout", logoutController);
 
 
 

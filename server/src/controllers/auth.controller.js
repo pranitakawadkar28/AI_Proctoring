@@ -7,6 +7,7 @@ import {
   resendVerificationService,
   resetPasswordService,
   verifyEmailService,
+  logoutService,
 } from "../services/auth.service.js";
 
 import { loginSchema, registerSchema } from "../validators/auth.validators.js";
@@ -135,5 +136,23 @@ export const resetPasswordController = async (req, res, next) => {
     });
   } catch (err) {
     next(err);   
+  }
+};
+
+export const logoutController = async (req, res, next) => {
+  try {
+    const refreshToken = req.cookies?.refreshToken;
+
+    await logoutService(refreshToken);
+
+    res.clearCookie("accessToken");
+    res.clearCookie("refreshToken");
+
+    res.json({
+      success: true,
+      message: "Logged out successfully",
+    });
+  } catch (error) {
+    next(error)
   }
 };
