@@ -5,7 +5,11 @@ import { comparePassword, hashPassword } from "../utils/hash.js";
 import { generateEmailToken } from "../utils/token.js";
 import { FRONTEND_URL } from "../config/env.js";
 import { sendEmail } from "../utils/sendEmail.js";
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+  verifyRefreshToken,
+} from "../utils/jwt.js";
 
 const EMAIL_TOKEN_EXPIRY = 10 * 60 * 1000;
 
@@ -88,13 +92,11 @@ export const loginService = async ({ email, password }) => {
 
   if (!user) throw new AppError("INVALID_CREDENTIALS", 401);
 
-  if (!user.isEmailVerified)
-    throw new AppError("EMAIL_NOT_VERIFIED", 403);
+  if (!user.isEmailVerified) throw new AppError("EMAIL_NOT_VERIFIED", 403);
 
   const isMatched = await comparePassword(password, user.password);
 
   if (!isMatched) throw new AppError("INVALID_CREDENTIALS", 401);
-
 
   const payload = {
     userId: user._id,
@@ -104,7 +106,7 @@ export const loginService = async ({ email, password }) => {
   const accessToken = generateAccessToken(payload);
   const refreshToken = generateRefreshToken(payload);
 
-   // store refresh in DB
+  // store refresh in DB
   user.refreshToken = refreshToken;
   await user.save();
 
@@ -122,9 +124,7 @@ export const refreshTokenService = async (token) => {
 
   const decoded = verifyRefreshToken(token);
 
-  const user = await userModel
-    .findById(decoded.userId)
-    .select("+refreshToken");
+  const user = await userModel.findById(decoded.userId).select("+refreshToken");
 
   if (!user || user.refreshToken !== token)
     throw new AppError("FORBIDDEN", 403);
@@ -140,47 +140,43 @@ export const refreshTokenService = async (token) => {
 export const forgotPasswordService = async (email) => {
   const user = await userModel.findOne({ email });
 
-  if(!user) return;
+  if (!user) return;
 
   const resetToken = crypto.randomBytes(32).toString("hex");
 
   const hashedToken = crypto
-  .createHash("sha256")
-  .update(resetToken)
-  .digest("hex")
+    .createHash("sha256")
+    .update(resetToken)
+    .digest("hex");
 
   user.resetPasswordToken = hashedToken;
   user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
 
   await user.save();
 
-  const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`
+  const resetUrl = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
 
   await sendEmail({
     to: user.email,
     subject: "Reset Password",
     html: `<p>Reset your password:</p><a href="${resetUrl}">${resetUrl}</a>`,
   });
-}
+};
 
 export const resetPasswordService = async (token, newPassword) => {
-  const hashedToken = crypto
-    .createHash("sha256")
-    .update(token)
-    .digest("hex");
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
   const user = await userModel.findOne({
     resetPasswordToken: hashedToken,
     resetPasswordExpire: { $gt: Date.now() },
-  })
+  });
 
   if (!user) {
-  throw new AppError("Invalid or expired reset token", 400);
-}
+    throw new AppError("Invalid or expired reset token", 400);
+  }
 
-// Hash new password
-  const hashedPassword = await hashPassword(newPassword, 12);
-
+  // Hash new password
+  const hashedPassword = await hashPassword(newPassword);
 
   user.password = hashedPassword;
 
@@ -192,13 +188,33 @@ export const resetPasswordService = async (token, newPassword) => {
   user.refreshToken = undefined;
 
   await user.save();
-}
+};
 
 export const logoutService = async (refreshToken) => {
   if (!refreshToken) return;
 
   await userModel.updateOne(
-    { refreshTokens: refreshToken },
-    { $pull: { refreshTokens: refreshToken } }
+    { refreshToken },
+    { $set: { refreshToken: null } },
   );
+};
+
+export const createUserService = async ({ username, email, password, role }) => {
+  username = username.trim();
+  email = email.toLowerCase().trim();
+
+  const exists = await userModel.findOne({ 
+    $or: [{ email }, { username }] 
+  });
+
+  if (exists) throw new AppError("USER_ALREADY_EXISTS", 409);
+
+  const hashed = await hashPassword(password);
+  return await userModel.create({
+    username,
+    email,
+    password: hashed,
+    role,
+    isEmailVerified: true,
+  });
 };
