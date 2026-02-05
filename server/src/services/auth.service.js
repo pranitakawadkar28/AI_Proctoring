@@ -6,7 +6,6 @@ import { generateEmailToken } from "../utils/token.js";
 import { FRONTEND_URL } from "../config/env.js";
 import { sendEmail } from "../utils/sendEmail.js";
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from "../utils/jwt.js";
-import bcrypt from "bcryptjs";
 
 const EMAIL_TOKEN_EXPIRY = 10 * 60 * 1000;
 
@@ -180,7 +179,7 @@ export const resetPasswordService = async (token, newPassword) => {
 }
 
 // Hash new password
-  const hashedPassword = await bcrypt.hash(newPassword, 12);
+  const hashedPassword = await hashPassword(newPassword, 12);
 
 
   user.password = hashedPassword;
@@ -198,7 +197,7 @@ export const resetPasswordService = async (token, newPassword) => {
 export const logoutService = async (refreshToken) => {
   if (!refreshToken) return;
 
-  await User.updateOne(
+  await userModel.updateOne(
     { refreshTokens: refreshToken },
     { $pull: { refreshTokens: refreshToken } }
   );
